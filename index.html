@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#0b1020">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="./icon-512.png">
+<title>abyssscript v0.5</title>
+<style>
+    :root {
+        --bg-color: #000000;
+        --card-bg: #000000;
+        --border-color: #2f3336;
+        --accent-red: #ff2a2a;
+        --text-main: #e7e9ea;
+        --text-sub: #71767b;
+        --chat-bubble-me: #3a0d0d;
+        --chat-bubble-other: #16181c;
+        --safe-area-bottom: env(safe-area-inset-bottom);
+    }
+
+    * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+    
+    body {
+        background-color: var(--bg-color);
+        color: var(--text-main);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        margin: 0; padding: 0; 
+        padding-bottom: calc(80px + var(--safe-area-bottom));
+        overscroll-behavior-y: none;
+    }
+
+    /* HEADER */
+    header {
+        position: fixed; top: 0; width: 100%;
+        background: rgba(0, 0, 0, 0.85);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--border-color);
+        padding: 12px; z-index: 100; text-align: center;
+        padding-top: max(12px, env(safe-area-inset-top));
+    }
+    h1 { margin: 0; font-size: 1.1rem; font-weight:800; letter-spacing: 1px; color: var(--text-main); font-family: sans-serif; }
+    h1 span { color: var(--accent-red); }
+
+    /* LAYOUT */
+    .container { 
+        padding: 0; /* Full width for timeline */
+        padding-top: calc(50px + env(safe-area-inset-top));
+        max-width: 600px; margin: 0 auto; 
+    }
+    .view-section { display: none; animation: fadeIn 0.3s ease; }
+    .view-section.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* --- TIMELINE STYLE (Stock) --- */
+    .timeline { display: flex; flex-direction: column; }
+    .tweet-card {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border-color);
+        display: flex; gap: 12px;
+        background: var(--bg-color);
+        transition: background 0.2s;
+    }
+    .tweet-card:active { background: rgba(255,255,255,0.03); }
+    .tweet-card.archived { opacity: 0.5; filter: grayscale(0.8); }
+    
+    .tweet-avatar {
+        width: 40px; height: 40px; border-radius: 50%;
+        background: #333; flex-shrink: 0; overflow: hidden;
+        display: flex; align-items: center; justify-content: center;
+        color: #fff; font-size: 1.2rem; font-weight: bold;
+    }
+    .tweet-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    
+    .tweet-body { flex-grow: 1; min-width: 0; }
+    
+    .tweet-header {
+        display: flex; justify-content: space-between; align-items: baseline;
+        margin-bottom: 2px;
+    }
+    .tweet-name { font-weight: bold; font-size: 0.95rem; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%;}
+    .tweet-meta { color: var(--text-sub); font-size: 0.85rem; }
+    
+    .tweet-text {
+        font-size: 0.95rem; line-height: 1.5; color: var(--text-main);
+        white-space: pre-wrap; margin-bottom: 10px; word-break: break-word;
+    }
+    
+    .tweet-media {
+        width: 100%; border-radius: 12px; border: 1px solid var(--border-color);
+        overflow: hidden; margin-top: 8px; cursor: pointer;
+    }
+    .tweet-media img { width: 100%; display: block; }
+    
+    .tweet-actions {
+        display: flex; justify-content: space-between; max-width: 80%;
+        margin-top: 8px; color: var(--text-sub);
+    }
+    .tweet-action-item { display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 1.1rem; }
+    .tweet-action-item.active { color: var(--accent-red); }
+    .tweet-action-item:hover { color: var(--accent-red); }
+
+    /* BOOKSHELF (Text/Draft) */
+    .bookshelf { padding: 15px; display: flex; flex-direction: column; gap: 6px; }
+    .book-spine {
+        background: #16181c; border-left: 4px solid var(--text-sub);
+        padding: 16px; border-radius: 4px;
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .book-spine strong { font-size: 1rem; color: #fff; }
+    .book-spine .meta { font-size: 0.75rem; color: #666; display: block; }
+
+    /* ALBUM (Image) */
+    .album-grid { padding: 10px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .album-cover {
+        aspect-ratio: 1; background: #111; border: 1px solid #333;
+        position: relative; cursor: pointer; border-radius: 4px; overflow: hidden;
+    }
+    .album-cover img { width: 100%; height: 100%; object-fit: cover; }
+    .album-title {
+        position: absolute; bottom: 0; left: 0; width: 100%;
+        background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+        color: #fff; font-size: 0.8rem; padding: 20px 5px 5px; 
+    }
+
+    /* READER MODAL */
+    .reader-modal {
+        display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: #000; z-index: 300; flex-direction: column;
+    }
+    .reader-modal.open { display: flex; animation: slideUp 0.25s ease-out; }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .reader-header {
+        padding: 15px; padding-top: max(15px, env(safe-area-inset-top));
+        border-bottom: 1px solid var(--border-color);
+        display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.9);
+    }
+    .reader-content { flex-grow: 1; overflow-y: auto; padding: 20px 15px; padding-bottom: 100px; }
+    
+    /* CHAT BUBBLES */
+    .chat-row { display: flex; margin-bottom: 12px; align-items: flex-start; }
+    .chat-row.right { flex-direction: row-reverse; }
+    .chat-icon { width: 38px; height: 38px; border-radius: 50%; margin: 0 8px; object-fit: cover; border:1px solid #333;}
+    .chat-bubble {
+        background: var(--chat-bubble-other); border-radius: 12px; padding: 10px 14px;
+        font-size: 0.95rem; line-height: 1.5; max-width: 80%; color: #e7e9ea;
+        white-space: pre-wrap; word-break: break-word;
+    }
+    .chat-row.right .chat-bubble { background: var(--chat-bubble-me); color: #ffeaea; }
+    .chat-name { font-size: 0.75rem; color: #71767b; margin: 0 10px 4px; }
+    .narration-text { text-align: center; color: #71767b; font-size: 0.85rem; font-style: italic; margin: 20px; }
+
+    /* INPUT MODAL */
+    .modal {
+        display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.6); z-index: 400; align-items: flex-end;
+    }
+    .modal.open { display: flex; }
+    .modal-content {
+        background: #000; width: 100%; max-width: 600px; margin: 0 auto;
+        padding: 20px; border-top: 1px solid var(--border-color);
+        height: 90vh; border-radius: 16px 16px 0 0; display: flex; flex-direction: column;
+    }
+    input, textarea, select {
+        width: 100%; background: #000; border: 1px solid var(--border-color); color: var(--text-main);
+        padding: 12px; margin-bottom: 12px; font-family: inherit; font-size: 1rem; border-radius: 4px;
+    }
+    input:focus, textarea:focus { border-color: var(--accent-red); outline: none; }
+    .btn { background: #eff3f4; color: #000; border: none; padding: 12px; border-radius: 99px; font-weight: bold; width: 100%; cursor: pointer;}
+    .btn.primary { background: var(--accent-red); color: #fff; }
+    .btn.dark { background: #000; border: 1px solid var(--border-color); color: #fff; }
+
+    /* FAB */
+    .fab-btn {
+        position: fixed; bottom: calc(80px + env(safe-area-inset-bottom)); right: 20px;
+        background: var(--accent-red); color: #fff;
+        width: 60px; height: 60px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 28px; box-shadow: 0 4px 15px rgba(255, 42, 42, 0.4);
+        z-index: 99; cursor: pointer;
+    }
+
+    /* NAV */
+    nav {
+        position: fixed; bottom: 0; width: 100%; background: rgba(0,0,0,0.95);
+        border-top: 1px solid var(--border-color); display: flex; justify-content: space-around;
+        padding: 10px 0; z-index: 100;
+        padding-bottom: max(10px, env(safe-area-inset-bottom));
+    }
+    .nav-item { color: var(--text-sub); text-align: center; font-size: 0.65rem; display: flex; flex-direction: column; align-items: center; width: 20%; }
+    .nav-item.active { color: var(--text-main); font-weight: bold; }
+    .nav-icon { font-size: 1.4rem; margin-bottom: 4px; }
+    
+    .profile-item { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid var(--border-color); }
+    .profile-item img { width: 40px; height: 40px; border-radius: 50%; margin-right: 15px; border:1px solid #333; object-fit: cover;}
+</style>
+</head>
+<body>
+
+<header>
+    <h1>abyssscript<span>_</span></h1>
+</header>
+
+<div class="container">
+    <div id="view-text" class="view-section active"><div id="text-list" class="bookshelf"></div></div>
+    <div id="view-image" class="view-section"><div id="image-list" class="album-grid"></div></div>
+    <div id="view-stock" class="view-section"><div id="stock-list" class="timeline"></div></div>
+    <div id="view-draft" class="view-section"><div id="draft-list" class="bookshelf"></div></div>
+    
+    <div id="view-config" class="view-section" style="padding:15px;">
+        <h3 style="color:var(--text-sub); margin-top:0;">ACCOUNTS</h3>
+        <div id="profile-list"></div>
+        <button class="btn dark" style="margin-top:10px;" onclick="openProfileModal()">+ Add Account</button>
+        <h3 style="color:var(--text-sub); margin-top:40px;">DATA</h3>
+        <button class="btn dark" onclick="exportData()">Export JSON</button>
+    </div>
+</div>
+
+<div class="fab-btn" onclick="openInputModal()">＋</div>
+
+<div id="reader-modal" class="reader-modal">
+    <div class="reader-header">
+        <span onclick="closeReader()" style="color:#fff; padding:10px;">← Back</span>
+        <span id="reader-title" style="font-weight:bold; color:var(--text-main);">Title</span>
+        <span onclick="editCurrentRecord()" style="color:var(--accent-red); padding:10px;">Edit</span>
+    </div>
+    <div id="reader-content" class="reader-content"></div>
+</div>
+
+<div id="input-modal" class="modal">
+    <div class="modal-content">
+        <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+            <span onclick="closeInputModal()" style="color:var(--text-main); padding:5px;">Cancel</span>
+            <span id="save-btn" onclick="saveEntry()" style="color:var(--accent-red); font-weight:bold; padding:5px;">Post</span>
+        </div>
+
+        <select id="entry-type" onchange="toggleFormFields()">
+            <option value="text">Log (Chat)</option>
+            <option value="image">Visual (Image)</option>
+            <option value="stock">Stock (Tweet)</option>
+            <option value="draft">Draft (Note)</option>
+        </select>
+
+        <div style="flex-grow:1; overflow-y:auto;">
+            <input type="text" id="inp-title" placeholder="Title">
+            
+            <div id="field-text-log">
+                <textarea id="inp-content" style="height:200px;" placeholder="What is happening?"></textarea>
+            </div>
+            
+            <div id="field-image-upload" style="display:none; padding:10px; border:1px dashed var(--border-color); border-radius:8px; margin-bottom:10px;">
+                <p style="color:var(--text-sub); font-size:0.8rem; margin-top:0;">* Attach Images / Screenshot</p>
+                <input type="file" id="inp-files" multiple accept="image/*" style="border:none; padding:0;">
+                <textarea id="inp-img-caption" rows="2" placeholder="Caption / Memo..." style="margin-bottom:0;"></textarea>
+            </div>
+
+            <div id="field-url" style="display:none;">
+                <input type="url" id="inp-url" placeholder="https://x.com/...">
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="profile-modal" class="modal">
+    <div class="modal-content" style="height:auto;">
+        <h3 style="color:var(--text-main);">New Profile</h3>
+        <input type="text" id="prof-name" placeholder="@username">
+        <input type="file" id="prof-file" accept="image/*">
+        <button class="btn primary" onclick="saveProfile()" style="margin-top:10px;">Save</button>
+        <button class="btn dark" onclick="closeProfileModal()" style="margin-top:10px;">Cancel</button>
+    </div>
+</div>
+
+<nav>
+    <div class="nav-item active" onclick="switchTab('text')"><span class="nav-icon">≡</span></div>
+    <div class="nav-item" onclick="switchTab('image')"><span class="nav-icon">□</span></div>
+    <div class="nav-item" onclick="switchTab('stock')"><span class="nav-icon">@</span></div>
+    <div class="nav-item" onclick="switchTab('draft')"><span class="nav-icon">✎</span></div>
+    <div class="nav-item" onclick="switchTab('config')"><span class="nav-icon">⚙</span></div>
+</nav>
+
+<script>
+    const DB_KEY = 'abyss_db_v2';
+    let db = JSON.parse(localStorage.getItem(DB_KEY)) || { text:[], image:[], stock:[], draft:[], profiles:[] };
+    if(!db.profiles) db.profiles = [];
+
+    let isEditing = false;
+    let editType = null;
+    let editIndex = null;
+
+    function saveDB() { localStorage.setItem(DB_KEY, JSON.stringify(db)); renderAll(); }
+
+    function renderAll() {
+        renderBookshelf('text', 'text-list');
+        renderAlbum('image', 'image-list');
+        renderTimeline('stock', 'stock-list');
+        renderBookshelf('draft', 'draft-list');
+        renderProfiles();
+    }
+
+    // --- RENDERERS ---
+    function renderBookshelf(type, elementId) {
+        const container = document.getElementById(elementId);
+        container.innerHTML = '';
+        const items = db[type] || [];
+        items.slice().reverse().forEach((item, index) => {
+            const realIndex = items.length - 1 - index;
+            const div = document.createElement('div');
+            div.className = 'book-spine';
+            div.onclick = (e) => { if(!e.target.closest('.del-btn')) openReader(type, realIndex); };
+            div.innerHTML = `
+                <div style="flex-grow:1; overflow:hidden;">
+                    <strong>${esc(item.title) || 'Untitled'}</strong>
+                    <span class="meta">${item.date}</span>
+                </div>
+                <div class="del-btn" onclick="deleteItem('${type}', ${realIndex})" style="padding:10px; color:#555;">×</div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function renderAlbum(type, elementId) {
+        const container = document.getElementById(elementId);
+        container.innerHTML = '';
+        const items = db[type] || [];
+        items.slice().reverse().forEach((item, index) => {
+            const realIndex = items.length - 1 - index;
+            const div = document.createElement('div');
+            div.className = 'album-cover';
+            div.onclick = (e) => { if(!e.target.closest('.del-btn')) openReader(type, realIndex); };
+            const thumb = (item.images && item.images.length > 0) ? item.images[0] : '';
+            div.innerHTML = `<img src="${thumb}"><div class="album-title">${esc(item.title)}</div>`;
+            container.appendChild(div);
+        });
+    }
+
+    // --- TIMELINE RENDERER (New Stock) ---
+    function renderTimeline(type, elementId) {
+        const container = document.getElementById(elementId);
+        container.innerHTML = '';
+        const items = db[type] || [];
+        
+        items.slice().reverse().forEach((item, index) => {
+            const realIndex = items.length - 1 - index;
+            const div = document.createElement('div');
+            div.className = 'tweet-card' + (item.done ? ' archived' : '');
+            
+            // Generate Avatar (First letter of title/user or default)
+            const userInitial = (item.title && item.title.length > 0) ? item.title[0].toUpperCase() : '@';
+            
+            let mediaHTML = '';
+            // New Stock items store images in 'images' array, Old ones might not have it
+            if (item.images && item.images.length > 0) {
+                mediaHTML = `<div class="tweet-media" onclick="openReader('${type}', ${realIndex})"><img src="${item.images[0]}"></div>`;
+            }
+
+            // If URL exists, show link icon or something? Added to actions
+            const urlHTML = item.url ? `<a href="${item.url}" target="_blank" class="tweet-action-item">🔗</a>` : '';
+
+            div.innerHTML = `
+                <div class="tweet-avatar">${userInitial}</div>
+                <div class="tweet-body">
+                    <div class="tweet-header">
+                        <span class="tweet-name">${esc(item.title) || 'Unknown'}</span>
+                        <span class="tweet-meta">・${item.date.split(' ')[0]}</span>
+                    </div>
+                    <div class="tweet-text">${esc(item.content)}</div>
+                    ${mediaHTML}
+                    <div class="tweet-actions">
+                        <div class="tweet-action-item ${item.done ? 'active' : ''}" onclick="toggleStock(${realIndex})">
+                            ${item.done ? '♥' : '♡'}
+                        </div>
+                        ${urlHTML}
+                        <div class="tweet-action-item" onclick="openReader('${type}', ${realIndex})">
+                            💬
+                        </div>
+                        <div class="tweet-action-item" onclick="deleteItem('${type}', ${realIndex})">
+                            🗑
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    // --- CHAT PARSER (v0.4 Logic) ---
+    function parseChat(rawText) {
+        if(!rawText) return '';
+        const lines = rawText.split('\n');
+        let html = '';
+        let currentProfile = null;
+        let currentName = null;
+        const narrators = ['ナレーター', 'ナレーション', 'ト書き', 'system', 'システム'];
+
+        lines.forEach(line => {
+            if(line.trim() === '') return;
+            const match = line.match(/^(.+?)[：:](.*)$/);
+            if (match) {
+                const name = match[1].trim();
+                const msg = match[2].trim();
+                const lowerName = name.toLowerCase();
+                if (narrators.includes(lowerName)) {
+                    currentProfile = null; currentName = 'NARRATION_MODE';
+                    html += `<div class="narration-text">${esc(msg)}</div>`;
+                } else {
+                    currentName = name;
+                    currentProfile = db.profiles.find(p => p.name === name);
+                    if (currentProfile) {
+                        const isUser = ['user','me','私'].includes(lowerName);
+                        const side = isUser ? 'right' : 'left';
+                        html += `<div class="chat-row ${side}"><img src="${currentProfile.icon}" class="chat-icon"><div style="flex-grow:1;"><span class="chat-name">${esc(name)}</span><div class="chat-bubble">${esc(msg)}</div></div></div>`;
+                    } else {
+                        currentProfile = null;
+                        html += `<div style="margin:10px 0;"><strong style="color:var(--accent-red)">${esc(name)}:</strong> ${esc(msg)}</div>`;
+                    }
+                }
+            } else {
+                if (currentName === 'NARRATION_MODE') html += `<div class="narration-text">${esc(line)}</div>`;
+                else if (currentProfile) {
+                    const isUser = ['user','me','私'].includes(currentProfile.name.toLowerCase());
+                    const side = isUser ? 'right' : 'left';
+                    html += `<div class="chat-row ${side}" style="margin-top:-8px;"><div style="width:54px; flex-shrink:0;"></div><div style="flex-grow:1;"><div class="chat-bubble">${esc(line)}</div></div></div>`;
+                } else {
+                    html += `<div style="margin:5px 0; color:var(--text-sub);">${esc(line)}</div>`;
+                }
+            }
+        });
+        return html;
+    }
+
+    // --- LOGIC ---
+    function openReader(type, index) {
+        editType = type; editIndex = index; // Set for edit context
+        const item = db[type][index];
+        document.getElementById('reader-title').textContent = type.toUpperCase();
+        const contentEl = document.getElementById('reader-content');
+        
+        if (type === 'text') contentEl.innerHTML = parseChat(item.content);
+        else if (type === 'draft') contentEl.innerHTML = `<div style="white-space:pre-wrap;">${esc(item.content)}</div>`;
+        else if (type === 'image' || type === 'stock') {
+            let h = '';
+            if(type === 'stock') { // Stock Reader View
+                 h += `<div class="tweet-card" style="border:none; padding:0;">
+                        <div class="tweet-avatar">${(item.title && item.title[0])||'@'}</div>
+                        <div class="tweet-body">
+                            <div class="tweet-header"><span class="tweet-name">${esc(item.title)}</span></div>
+                            <div class="tweet-text" style="font-size:1.1rem;">${esc(item.content)}</div>
+                        </div>
+                      </div>`;
+            }
+            if(item.images) item.images.forEach(img => h += `<img src="${img}" style="width:100%; margin-top:15px; border-radius:12px; border:1px solid #333;">`);
+            if(item.caption) h += `<div style="padding:15px; margin-top:10px; color:#ccc;">${esc(item.caption)}</div>`;
+            if(item.url) h += `<a href="${item.url}" target="_blank" style="display:block; padding:15px; color:var(--accent-red); word-break:break-all;">${esc(item.url)}</a>`;
+            contentEl.innerHTML = h;
+        }
+        document.getElementById('reader-modal').classList.add('open');
+    }
+    
+    function closeReader() { document.getElementById('reader-modal').classList.remove('open'); }
+    function closeInputModal() { document.getElementById('input-modal').classList.remove('open'); }
+    function openInputModal() { 
+        isEditing = false;
+        document.getElementById('inp-title').value = '';
+        document.getElementById('inp-content').value = '';
+        document.getElementById('inp-url').value = '';
+        document.getElementById('inp-files').value = ''; 
+        document.getElementById('inp-img-caption').value = '';
+        toggleFormFields();
+        document.getElementById('input-modal').classList.add('open'); 
+    }
+    function editCurrentRecord() {
+        isEditing = true;
+        closeReader();
+        const item = db[editType][editIndex];
+        document.getElementById('entry-type').value = editType;
+        document.getElementById('inp-title').value = item.title || '';
+        document.getElementById('inp-content').value = item.content || '';
+        document.getElementById('inp-url').value = item.url || '';
+        document.getElementById('inp-img-caption').value = item.caption || '';
+        toggleFormFields();
+        document.getElementById('input-modal').classList.add('open');
+    }
+
+    function toggleFormFields() {
+        const type = document.getElementById('entry-type').value;
+        const phMap = {text: "Topic", image: "Prompt", stock: "Account Name / Source", draft: "Title"};
+        document.getElementById('inp-title').placeholder = phMap[type];
+        
+        document.getElementById('field-text-log').style.display = (type!=='image')?'block':'none';
+        // Allow image upload for STOCK too
+        document.getElementById('field-image-upload').style.display = (type==='image' || type==='stock')?'block':'none';
+        document.getElementById('field-url').style.display = (type==='stock')?'block':'none';
+    }
+
+    async function saveEntry() {
+        const type = document.getElementById('entry-type').value;
+        const title = document.getElementById('inp-title').value;
+        const date = isEditing ? db[type][editIndex].date : new Date().toLocaleDateString();
+        let entry = { title, date };
+        
+        if(type!=='image') entry.content = document.getElementById('inp-content').value;
+        if(type==='stock') entry.url = document.getElementById('inp-url').value;
+        if(type==='image') entry.caption = document.getElementById('inp-img-caption').value;
+        if(type==='image' || type==='stock') {
+             const files = document.getElementById('inp-files').files;
+             if(isEditing && files.length===0) entry.images = db[type][editIndex].images; 
+             else {
+                 entry.images = [];
+                 for(let i=0; i<files.length; i++) entry.images.push(await toBase64(files[i]));
+             }
+        }
+        if(type==='stock') entry.done = isEditing ? db[type][editIndex].done : false;
+
+        if(isEditing) db[type][editIndex] = entry; else db[type].push(entry);
+        saveDB(); closeInputModal(); switchTab(type);
+    }
+    
+    // Utils
+    function switchTab(type) {
+        document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        document.getElementById('view-' + type).classList.add('active');
+        const map = {text:0, image:1, stock:2, draft:3, config:4};
+        if(map[type]!==undefined) document.querySelectorAll('.nav-item')[map[type]].classList.add('active');
+    }
+    function renderProfiles() {
+        const list = document.getElementById('profile-list'); list.innerHTML = '';
+        db.profiles.forEach((p, idx) => {
+            const div = document.createElement('div'); div.className = 'profile-item';
+            div.innerHTML = `<img src="${p.icon}"><div style="flex-grow:1;">${esc(p.name)}</div><button class="btn dark" style="width:auto;padding:5px 12px;font-size:0.8rem;" onclick="deleteProfile(${idx})">×</button>`;
+            list.appendChild(div);
+        });
+    }
+    function deleteItem(t,i){ if(confirm('Delete?')) { db[t].splice(i,1); saveDB(); } }
+    function deleteProfile(i){ if(confirm('Remove?')) { db.profiles.splice(i,1); saveDB(); } }
+    function toggleStock(i){ db.stock[i].done = !db.stock[i].done; saveDB(); }
+    function openProfileModal(){ document.getElementById('profile-modal').classList.add('open'); }
+    function closeProfileModal(){ document.getElementById('profile-modal').classList.remove('open'); }
+    async function saveProfile(){
+        const name = document.getElementById('prof-name').value.trim();
+        const file = document.getElementById('prof-file').files[0];
+        if(!name) return;
+        let icon = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIiBmaWxsPSIjMzMzIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIvPjwvc3ZnPg==';
+        if(file) icon = await toBase64(file);
+        const ex = db.profiles.find(p=>p.name===name); if(ex) ex.icon = icon; else db.profiles.push({name, icon});
+        saveDB(); closeProfileModal(); document.getElementById('prof-name').value='';
+    }
+    function exportData(){
+        const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(db,null,2)],{type:"application/json"}));
+        a.download="abyssscript_backup.json"; a.click();
+    }
+    const esc=s=>s?s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"): '';
+    const toBase64=f=>new Promise(r=>{const d=new FileReader();d.readAsDataURL(f);d.onload=()=>r(d.result);});
+    renderAll(); toggleFormFields();
+</script>
+</body>
+</html>

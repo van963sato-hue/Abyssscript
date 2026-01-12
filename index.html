@@ -467,7 +467,7 @@
         let html = '';
         let currentProfile = null;
         let currentName = null;
-        const narrators = ['ナレーター', 'ナレーション', 'ト書き', 'system', 'システム'];
+        const narrators = ['ナレーター', 'ナレーション', 'ト書き', 'system', 'システム', 'narration', 'narrator'];
 
         lines.forEach(line => {
             if(line.trim() === '') return;
@@ -476,14 +476,14 @@
                 const name = match[1].trim();
                 const msg = match[2].trim();
                 const lowerName = name.toLowerCase();
-                if (narrators.includes(lowerName)) {
+                if (narrators.map(n => n.toLowerCase()).includes(lowerName)) {
                     currentProfile = null; currentName = 'NARRATION_MODE';
                     html += `<div class="narration-text">${esc(msg)}</div>`;
                 } else {
                     currentName = name;
                     currentProfile = db.profiles.find(p => p.name === name);
                     if (currentProfile) {
-                        const isUser = ['user','me','私'].includes(lowerName);
+                        const isUser = ['user','me','私','ユーザー'].includes(lowerName);
                         const side = isUser ? 'right' : 'left';
                         html += `<div class="chat-row ${side}"><img src="${currentProfile.icon}" class="chat-icon"><div style="flex-grow:1;"><span class="chat-name">${esc(name)}</span><div class="chat-bubble">${esc(msg)}</div></div></div>`;
                     } else {
@@ -494,7 +494,7 @@
             } else {
                 if (currentName === 'NARRATION_MODE') html += `<div class="narration-text">${esc(line)}</div>`;
                 else if (currentProfile) {
-                    const isUser = ['user','me','私'].includes(currentProfile.name.toLowerCase());
+                    const isUser = ['user','me','私','ユーザー'].includes(currentProfile.name.toLowerCase());
                     const side = isUser ? 'right' : 'left';
                     html += `<div class="chat-row ${side}" style="margin-top:-8px;"><div style="width:54px; flex-shrink:0;"></div><div style="flex-grow:1;"><div class="chat-bubble">${esc(line)}</div></div></div>`;
                 } else {

@@ -580,23 +580,32 @@
     async function saveEntry() {
         const type = document.getElementById('entry-type').value;
         const title = document.getElementById('inp-title').value;
-        const date = isEditing ? db[type][editIndex].date : new Date().toLocaleDateString();
-        let entry = { title, date };
+
+        let entry;
+        if(isEditing) {
+            // 編集時は既存のエントリをコピーして保持
+            entry = {...db[type][editIndex]};
+        } else {
+            // 新規作成時は新しいオブジェクト
+            entry = { date: new Date().toLocaleDateString() };
+        }
+
+        // 基本情報を更新
+        entry.title = title;
 
         if(type!=='image') entry.content = document.getElementById('inp-content').value;
         if(type==='stock') entry.url = document.getElementById('inp-url').value;
         if(type==='image') entry.caption = document.getElementById('inp-img-caption').value;
         if(type==='image' || type==='stock') {
              const files = document.getElementById('inp-files').files;
-             if(isEditing && files.length===0) entry.images = db[type][editIndex].images;
-             else {
+             if(files.length > 0) {
                  entry.images = [];
                  for(let i=0; i<files.length; i++) entry.images.push(await toBase64(files[i]));
              }
+             // filesがない場合は既存のimagesを保持（既にentryにコピーされている）
         }
-        if(type==='stock') entry.done = isEditing ? db[type][editIndex].done : false;
 
-        // Save tags
+        // タグを更新
         const character = document.getElementById('inp-character').value;
         const category = document.getElementById('inp-category').value;
         const theme = document.getElementById('inp-theme').value;
@@ -605,10 +614,10 @@
             if(character) entry.tags.character = character;
             if(category) entry.tags.category = category;
             if(theme) entry.tags.theme = theme;
+        } else {
+            // タグが全て空の場合はtagsを削除
+            delete entry.tags;
         }
-
-        // Preserve favorite status if editing
-        if(isEditing && db[type][editIndex].favorite) entry.favorite = true;
 
         if(isEditing) db[type][editIndex] = entry; else db[type].push(entry);
         saveDB(); closeInputModal(); switchTab(type);

@@ -30,9 +30,10 @@
         background-color: var(--bg-color);
         color: var(--text-main);
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        margin: 0; padding: 0; 
-        padding-bottom: calc(80px + var(--safe-area-bottom));
+        margin: 0; padding: 0;
+        padding-bottom: calc(90px + var(--safe-area-bottom));
         overscroll-behavior-y: none;
+        -webkit-overflow-scrolling: touch;
     }
 
     /* HEADER */
@@ -101,9 +102,9 @@
         display: flex; justify-content: space-between; max-width: 80%;
         margin-top: 8px; color: var(--text-sub);
     }
-    .tweet-action-item { display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 1.1rem; }
+    .tweet-action-item { display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 1.1rem; padding: 8px; margin: -8px; min-width: 44px; min-height: 44px; justify-content: center; }
     .tweet-action-item.active { color: var(--accent-red); }
-    .tweet-action-item:hover { color: var(--accent-red); }
+    .tweet-action-item:active { opacity: 0.6; }
 
     /* BOOKSHELF (Text/Draft) */
     .bookshelf { padding: 15px; display: flex; flex-direction: column; gap: 6px; }
@@ -168,22 +169,25 @@
     }
     input, textarea, select {
         width: 100%; background: #000; border: 1px solid var(--border-color); color: var(--text-main);
-        padding: 12px; margin-bottom: 12px; font-family: inherit; font-size: 1rem; border-radius: 4px;
+        padding: 14px; margin-bottom: 12px; font-family: inherit; font-size: 1rem; border-radius: 4px;
+        min-height: 44px;
     }
-    input:focus, textarea:focus { border-color: var(--accent-red); outline: none; }
-    .btn { background: #eff3f4; color: #000; border: none; padding: 12px; border-radius: 99px; font-weight: bold; width: 100%; cursor: pointer;}
+    input:focus, textarea:focus, select:focus { border-color: var(--accent-red); outline: none; }
+    .btn { background: #eff3f4; color: #000; border: none; padding: 14px; border-radius: 99px; font-weight: bold; width: 100%; cursor: pointer; min-height: 44px; font-size: 1rem;}
     .btn.primary { background: var(--accent-red); color: #fff; }
     .btn.dark { background: #000; border: 1px solid var(--border-color); color: #fff; }
+    .btn:active { opacity: 0.7; }
 
     /* FAB */
     .fab-btn {
-        position: fixed; bottom: calc(80px + env(safe-area-inset-bottom)); right: 20px;
+        position: fixed; bottom: calc(90px + env(safe-area-inset-bottom)); right: 20px;
         background: var(--accent-red); color: #fff;
-        width: 60px; height: 60px; border-radius: 50%;
+        width: 56px; height: 56px; border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
         font-size: 28px; box-shadow: 0 4px 15px rgba(255, 42, 42, 0.4);
-        z-index: 99; cursor: pointer;
+        z-index: 99; cursor: pointer; transition: transform 0.2s;
     }
+    .fab-btn:active { transform: scale(0.95); }
 
     /* NAV */
     nav {
@@ -192,12 +196,37 @@
         padding: 10px 0; z-index: 100;
         padding-bottom: max(10px, env(safe-area-inset-bottom));
     }
-    .nav-item { color: var(--text-sub); text-align: center; font-size: 0.65rem; display: flex; flex-direction: column; align-items: center; width: 20%; }
+    .nav-item { color: var(--text-sub); text-align: center; font-size: 0.65rem; display: flex; flex-direction: column; align-items: center; width: 20%; cursor: pointer; padding: 5px 0; }
     .nav-item.active { color: var(--text-main); font-weight: bold; }
-    .nav-icon { font-size: 1.4rem; margin-bottom: 4px; }
+    .nav-item.active .nav-icon { color: var(--accent-red); }
+    .nav-icon { font-size: 1.4rem; margin-bottom: 2px; }
+    .nav-label { font-size: 0.7rem; }
     
     .profile-item { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid var(--border-color); }
     .profile-item img { width: 40px; height: 40px; border-radius: 50%; margin-right: 15px; border:1px solid #333; object-fit: cover;}
+
+    /* TAGS */
+    .tag-container { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+    .tag {
+        background: rgba(255, 42, 42, 0.15);
+        color: var(--accent-red);
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        border: 1px solid rgba(255, 42, 42, 0.3);
+    }
+    .tag-badge {
+        display: inline-block;
+        background: rgba(255, 42, 42, 0.2);
+        color: var(--accent-red);
+        padding: 4px 10px;
+        border-radius: 15px;
+        font-size: 0.75rem;
+        border: 1px solid rgba(255, 42, 42, 0.4);
+        cursor: pointer;
+        margin: 2px;
+    }
+    .tag-badge:hover { background: rgba(255, 42, 42, 0.3); }
 </style>
 </head>
 <body>
@@ -213,11 +242,29 @@
     <div id="view-draft" class="view-section"><div id="draft-list" class="bookshelf"></div></div>
     
     <div id="view-config" class="view-section" style="padding:15px;">
-        <h3 style="color:var(--text-sub); margin-top:0;">ACCOUNTS</h3>
+        <h3 style="color:var(--text-sub); margin-top:0;" data-ja="言語設定" data-en="LANGUAGE">言語設定</h3>
+        <select id="lang-selector" onchange="switchLanguage()" style="margin-bottom:20px;">
+            <option value="ja">日本語</option>
+            <option value="en">English</option>
+        </select>
+
+        <h3 style="color:var(--text-sub); margin-top:20px;" data-ja="アカウント" data-en="ACCOUNTS">アカウント</h3>
         <div id="profile-list"></div>
-        <button class="btn dark" style="margin-top:10px;" onclick="openProfileModal()">+ Add Account</button>
-        <h3 style="color:var(--text-sub); margin-top:40px;">DATA</h3>
-        <button class="btn dark" onclick="exportData()">Export JSON</button>
+        <button class="btn dark" style="margin-top:10px;" onclick="openProfileModal()"><span data-ja="+ アカウント追加" data-en="+ Add Account">+ アカウント追加</span></button>
+
+        <h3 style="color:var(--text-sub); margin-top:40px;" data-ja="タグ管理" data-en="TAG MANAGEMENT">タグ管理</h3>
+        <p style="color:var(--text-sub); font-size:0.85rem;"><span data-ja="カテゴリ" data-en="Categories">カテゴリ</span></p>
+        <div id="category-list" style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:10px;"></div>
+        <input type="text" id="new-category" placeholder="新しいカテゴリ" style="margin-bottom:5px;">
+        <button class="btn dark" onclick="addCategory()"><span data-ja="+ カテゴリ追加" data-en="+ Add Category">+ カテゴリ追加</span></button>
+
+        <p style="color:var(--text-sub); font-size:0.85rem; margin-top:20px;"><span data-ja="テーマ" data-en="Themes">テーマ</span></p>
+        <div id="theme-list" style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:10px;"></div>
+        <input type="text" id="new-theme" placeholder="新しいテーマ" style="margin-bottom:5px;">
+        <button class="btn dark" onclick="addTheme()"><span data-ja="+ テーマ追加" data-en="+ Add Theme">+ テーマ追加</span></button>
+
+        <h3 style="color:var(--text-sub); margin-top:40px;" data-ja="データ" data-en="DATA">データ</h3>
+        <button class="btn dark" onclick="exportData()"><span data-ja="エクスポート JSON" data-en="Export JSON">エクスポート JSON</span></button>
     </div>
 </div>
 
@@ -248,11 +295,11 @@
 
         <div style="flex-grow:1; overflow-y:auto;">
             <input type="text" id="inp-title" placeholder="Title">
-            
+
             <div id="field-text-log">
                 <textarea id="inp-content" style="height:200px;" placeholder="What is happening?"></textarea>
             </div>
-            
+
             <div id="field-image-upload" style="display:none; padding:10px; border:1px dashed var(--border-color); border-radius:8px; margin-bottom:10px;">
                 <p style="color:var(--text-sub); font-size:0.8rem; margin-top:0;">* Attach Images / Screenshot</p>
                 <input type="file" id="inp-files" multiple accept="image/*" style="border:none; padding:0;">
@@ -261,6 +308,19 @@
 
             <div id="field-url" style="display:none;">
                 <input type="url" id="inp-url" placeholder="https://x.com/...">
+            </div>
+
+            <div id="field-tags" style="margin-top:10px;">
+                <p style="color:var(--text-sub); font-size:0.85rem; margin:8px 0 5px;"><span data-ja="タグ" data-en="Tags">タグ</span></p>
+                <select id="inp-character" style="margin-bottom:8px;">
+                    <option value=""><span data-ja="キャラクター選択" data-en="Select Character">キャラクター選択</span></option>
+                </select>
+                <select id="inp-category" style="margin-bottom:8px;">
+                    <option value=""><span data-ja="カテゴリ選択" data-en="Select Category">カテゴリ選択</span></option>
+                </select>
+                <select id="inp-theme" style="margin-bottom:8px;">
+                    <option value=""><span data-ja="テーマ選択" data-en="Select Theme">テーマ選択</span></option>
+                </select>
             </div>
         </div>
     </div>
@@ -277,17 +337,20 @@
 </div>
 
 <nav>
-    <div class="nav-item active" onclick="switchTab('text')"><span class="nav-icon">≡</span></div>
-    <div class="nav-item" onclick="switchTab('image')"><span class="nav-icon">□</span></div>
-    <div class="nav-item" onclick="switchTab('stock')"><span class="nav-icon">@</span></div>
-    <div class="nav-item" onclick="switchTab('draft')"><span class="nav-icon">✎</span></div>
-    <div class="nav-item" onclick="switchTab('config')"><span class="nav-icon">⚙</span></div>
+    <div class="nav-item active" onclick="switchTab('text')"><span class="nav-icon">≡</span><span class="nav-label" data-ja="ログ" data-en="Logs">ログ</span></div>
+    <div class="nav-item" onclick="switchTab('image')"><span class="nav-icon">□</span><span class="nav-label" data-ja="画像" data-en="Images">画像</span></div>
+    <div class="nav-item" onclick="switchTab('stock')"><span class="nav-icon">@</span><span class="nav-label" data-ja="お題" data-en="Topics">お題</span></div>
+    <div class="nav-item" onclick="switchTab('draft')"><span class="nav-icon">✎</span><span class="nav-label" data-ja="下書き" data-en="Drafts">下書き</span></div>
+    <div class="nav-item" onclick="switchTab('config')"><span class="nav-icon">⚙</span><span class="nav-label" data-ja="設定" data-en="Settings">設定</span></div>
 </nav>
 
 <script>
     const DB_KEY = 'abyss_db_v2';
-    let db = JSON.parse(localStorage.getItem(DB_KEY)) || { text:[], image:[], stock:[], draft:[], profiles:[] };
+    let db = JSON.parse(localStorage.getItem(DB_KEY)) || { text:[], image:[], stock:[], draft:[], profiles:[], categories:[], themes:[], lang:'ja' };
     if(!db.profiles) db.profiles = [];
+    if(!db.categories) db.categories = [];
+    if(!db.themes) db.themes = [];
+    if(!db.lang) db.lang = 'ja';
 
     let isEditing = false;
     let editType = null;
@@ -301,6 +364,7 @@
         renderTimeline('stock', 'stock-list');
         renderBookshelf('draft', 'draft-list');
         renderProfiles();
+        renderTagManagement();
     }
 
     // --- RENDERERS ---
@@ -312,13 +376,19 @@
             const realIndex = items.length - 1 - index;
             const div = document.createElement('div');
             div.className = 'book-spine';
-            div.onclick = (e) => { if(!e.target.closest('.del-btn')) openReader(type, realIndex); };
+            div.onclick = (e) => { if(!e.target.closest('.del-btn') && !e.target.closest('.fav-btn')) openReader(type, realIndex); };
+            const favIcon = item.favorite ? '♥' : '♡';
+            const favColor = item.favorite ? 'var(--accent-red)' : '#555';
             div.innerHTML = `
                 <div style="flex-grow:1; overflow:hidden;">
                     <strong>${esc(item.title) || 'Untitled'}</strong>
                     <span class="meta">${item.date}</span>
+                    ${renderTags(item.tags)}
                 </div>
-                <div class="del-btn" onclick="deleteItem('${type}', ${realIndex})" style="padding:10px; color:#555;">×</div>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <div class="fav-btn" onclick="toggleFavorite('${type}', ${realIndex})" style="padding:10px; color:${favColor}; cursor:pointer;">${favIcon}</div>
+                    <div class="del-btn" onclick="deleteItem('${type}', ${realIndex})" style="padding:10px; color:#555;">×</div>
+                </div>
             `;
             container.appendChild(div);
         });
@@ -370,6 +440,7 @@
                         <span class="tweet-meta">・${item.date.split(' ')[0]}</span>
                     </div>
                     <div class="tweet-text">${esc(item.content)}</div>
+                    ${renderTags(item.tags)}
                     ${mediaHTML}
                     <div class="tweet-actions">
                         <div class="tweet-action-item ${item.done ? 'active' : ''}" onclick="toggleStock(${realIndex})">
@@ -464,15 +535,19 @@
     
     function closeReader() { document.getElementById('reader-modal').classList.remove('open'); }
     function closeInputModal() { document.getElementById('input-modal').classList.remove('open'); }
-    function openInputModal() { 
+    function openInputModal() {
         isEditing = false;
         document.getElementById('inp-title').value = '';
         document.getElementById('inp-content').value = '';
         document.getElementById('inp-url').value = '';
-        document.getElementById('inp-files').value = ''; 
+        document.getElementById('inp-files').value = '';
         document.getElementById('inp-img-caption').value = '';
+        document.getElementById('inp-character').value = '';
+        document.getElementById('inp-category').value = '';
+        document.getElementById('inp-theme').value = '';
+        populateTagSelects();
         toggleFormFields();
-        document.getElementById('input-modal').classList.add('open'); 
+        document.getElementById('input-modal').classList.add('open');
     }
     function editCurrentRecord() {
         isEditing = true;
@@ -483,6 +558,10 @@
         document.getElementById('inp-content').value = item.content || '';
         document.getElementById('inp-url').value = item.url || '';
         document.getElementById('inp-img-caption').value = item.caption || '';
+        populateTagSelects();
+        document.getElementById('inp-character').value = item.tags?.character || '';
+        document.getElementById('inp-category').value = item.tags?.category || '';
+        document.getElementById('inp-theme').value = item.tags?.theme || '';
         toggleFormFields();
         document.getElementById('input-modal').classList.add('open');
     }
@@ -503,19 +582,33 @@
         const title = document.getElementById('inp-title').value;
         const date = isEditing ? db[type][editIndex].date : new Date().toLocaleDateString();
         let entry = { title, date };
-        
+
         if(type!=='image') entry.content = document.getElementById('inp-content').value;
         if(type==='stock') entry.url = document.getElementById('inp-url').value;
         if(type==='image') entry.caption = document.getElementById('inp-img-caption').value;
         if(type==='image' || type==='stock') {
              const files = document.getElementById('inp-files').files;
-             if(isEditing && files.length===0) entry.images = db[type][editIndex].images; 
+             if(isEditing && files.length===0) entry.images = db[type][editIndex].images;
              else {
                  entry.images = [];
                  for(let i=0; i<files.length; i++) entry.images.push(await toBase64(files[i]));
              }
         }
         if(type==='stock') entry.done = isEditing ? db[type][editIndex].done : false;
+
+        // Save tags
+        const character = document.getElementById('inp-character').value;
+        const category = document.getElementById('inp-category').value;
+        const theme = document.getElementById('inp-theme').value;
+        if(character || category || theme) {
+            entry.tags = {};
+            if(character) entry.tags.character = character;
+            if(category) entry.tags.category = category;
+            if(theme) entry.tags.theme = theme;
+        }
+
+        // Preserve favorite status if editing
+        if(isEditing && db[type][editIndex].favorite) entry.favorite = true;
 
         if(isEditing) db[type][editIndex] = entry; else db[type].push(entry);
         saveDB(); closeInputModal(); switchTab(type);
@@ -540,6 +633,7 @@
     function deleteItem(t,i){ if(confirm('Delete?')) { db[t].splice(i,1); saveDB(); } }
     function deleteProfile(i){ if(confirm('Remove?')) { db.profiles.splice(i,1); saveDB(); } }
     function toggleStock(i){ db.stock[i].done = !db.stock[i].done; saveDB(); }
+    function toggleFavorite(type, i){ db[type][i].favorite = !db[type][i].favorite; saveDB(); }
     function openProfileModal(){ document.getElementById('profile-modal').classList.add('open'); }
     function closeProfileModal(){ document.getElementById('profile-modal').classList.remove('open'); }
     async function saveProfile(){
@@ -557,7 +651,120 @@
     }
     const esc=s=>s?s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"): '';
     const toBase64=f=>new Promise(r=>{const d=new FileReader();d.readAsDataURL(f);d.onload=()=>r(d.result);});
-    renderAll(); toggleFormFields();
+
+    // Language switching
+    function switchLanguage() {
+        const lang = document.getElementById('lang-selector').value;
+        db.lang = lang;
+        saveDB();
+        updateLanguage();
+    }
+
+    function updateLanguage() {
+        const lang = db.lang || 'ja';
+        document.getElementById('lang-selector').value = lang;
+        document.querySelectorAll('[data-ja][data-en]').forEach(el => {
+            const text = lang === 'ja' ? el.getAttribute('data-ja') : el.getAttribute('data-en');
+            if(el.tagName === 'SPAN') el.textContent = text;
+            else if(el.tagName === 'OPTION') el.textContent = text;
+        });
+    }
+
+    // Tag management
+    function addCategory() {
+        const input = document.getElementById('new-category');
+        const val = input.value.trim();
+        if(val && !db.categories.includes(val)) {
+            db.categories.push(val);
+            saveDB();
+            input.value = '';
+        }
+    }
+
+    function addTheme() {
+        const input = document.getElementById('new-theme');
+        const val = input.value.trim();
+        if(val && !db.themes.includes(val)) {
+            db.themes.push(val);
+            saveDB();
+            input.value = '';
+        }
+    }
+
+    function removeCategory(cat) {
+        if(confirm('削除しますか？')) {
+            db.categories = db.categories.filter(c => c !== cat);
+            saveDB();
+        }
+    }
+
+    function removeTheme(theme) {
+        if(confirm('削除しますか？')) {
+            db.themes = db.themes.filter(t => t !== theme);
+            saveDB();
+        }
+    }
+
+    function renderTagManagement() {
+        const catList = document.getElementById('category-list');
+        catList.innerHTML = '';
+        db.categories.forEach(cat => {
+            const badge = document.createElement('span');
+            badge.className = 'tag-badge';
+            badge.innerHTML = `${esc(cat)} <span onclick="removeCategory('${esc(cat)}')" style="margin-left:5px; cursor:pointer;">×</span>`;
+            catList.appendChild(badge);
+        });
+
+        const themeList = document.getElementById('theme-list');
+        themeList.innerHTML = '';
+        db.themes.forEach(theme => {
+            const badge = document.createElement('span');
+            badge.className = 'tag-badge';
+            badge.innerHTML = `${esc(theme)} <span onclick="removeTheme('${esc(theme)}')" style="margin-left:5px; cursor:pointer;">×</span>`;
+            themeList.appendChild(badge);
+        });
+    }
+
+    function populateTagSelects() {
+        const charSelect = document.getElementById('inp-character');
+        charSelect.innerHTML = '<option value="">キャラクター選択</option>';
+        db.profiles.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.name;
+            opt.textContent = p.name;
+            charSelect.appendChild(opt);
+        });
+
+        const catSelect = document.getElementById('inp-category');
+        catSelect.innerHTML = '<option value="">カテゴリ選択</option>';
+        db.categories.forEach(cat => {
+            const opt = document.createElement('option');
+            opt.value = cat;
+            opt.textContent = cat;
+            catSelect.appendChild(opt);
+        });
+
+        const themeSelect = document.getElementById('inp-theme');
+        themeSelect.innerHTML = '<option value="">テーマ選択</option>';
+        db.themes.forEach(theme => {
+            const opt = document.createElement('option');
+            opt.value = theme;
+            opt.textContent = theme;
+            themeSelect.appendChild(opt);
+        });
+    }
+
+    function renderTags(tags) {
+        if(!tags) return '';
+        let html = '<div class="tag-container">';
+        if(tags.character) html += `<span class="tag">👤 ${esc(tags.character)}</span>`;
+        if(tags.category) html += `<span class="tag">📁 ${esc(tags.category)}</span>`;
+        if(tags.theme) html += `<span class="tag">🏷️ ${esc(tags.theme)}</span>`;
+        html += '</div>';
+        return html;
+    }
+
+    renderAll(); toggleFormFields(); updateLanguage();
 </script>
 </body>
 </html>
